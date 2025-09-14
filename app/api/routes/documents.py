@@ -107,18 +107,34 @@ async def process_document(
         # Parse the document
         parser = MarkdownParser()
         parsed_data = parser.parse_document(document.content)
+        
+        logger.info("Parsed data", features_count=len(parsed_data.get("features", [])))
 
         # Create features from parsed data
+        features_created = 0
         for feature_data in parsed_data.get("features", []):
-            feature_data["document_id"] = document_id
-            await db_service.create_feature(feature_data)
+            try:
+                feature_data["document_id"] = document_id
+                # Ensure we have the required fields
+                if 'user_stories' not in feature_data:
+                    feature_data['user_stories'] = ""
+                if 'acceptance_criteria' not in feature_data:
+                    feature_data['acceptance_criteria'] = ""
+                
+                logger.info("Creating feature", feature_title=feature_data.get('title', 'Unknown'))
+                await db_service.create_feature(feature_data)
+                features_created += 1
+                logger.info("Feature created successfully", feature_title=feature_data.get('title', 'Unknown'))
+            except Exception as e:
+                logger.error("Failed to create feature", error=str(e), feature_data=feature_data)
+                raise
 
         # Update document status to completed
         await db_service.update_document_status(document_id, "completed")
 
-        logger.info("Document processed", document_id=document_id, features_created=len(parsed_data.get("features", [])))
+        logger.info("Document processed", document_id=document_id, features_created=features_created)
 
-        return {"status": "success", "features_created": len(parsed_data.get("features", []))}
+        return {"status": "success", "features_created": features_created}
 
     except HTTPException:
         # Re-raise HTTPExceptions to preserve status codes

@@ -1,0 +1,51 @@
+{
+  "timestamp": "2025-09-14T22:49:00Z",
+  "system_status": "operational",
+  "containers": {
+    "app": {
+      "status": "running",
+      "port": "8000",
+      "health": "healthy"
+    },
+    "streamlit-frontend": {
+      "status": "running", 
+      "port": "8501",
+      "health": "healthy"
+    }
+  },
+  "database": {
+    "type": "SQLite",
+    "status": "connected",
+    "tables": ["documents", "features", "scenarios"],
+    "records": {
+      "documents": 1,
+      "features": 1,
+      "scenarios": 2
+    }
+  },
+  "llm_services": {
+    "grok": {
+      "status": "operational",
+      "api_key_configured": true,
+      "health_check": true
+    },
+    "claude": {
+      "status": "not_configured",
+      "api_key_configured": false,
+      "health_check": false
+    }
+  },
+  "api_endpoints": {
+    "health": "operational",
+    "documents": "operational",
+    "scenarios": "operational",
+    "export": "operational"
+  },
+  "performance_metrics": {
+    "average_response_time_ms": 2000,
+    "scenario_generation_time_ms": 40949,
+    "total_processing_time_ms": 40949,
+    "memory_usage": "normal",
+    "cpu_usage": "normal"
+  }
+}

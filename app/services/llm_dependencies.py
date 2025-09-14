@@ -19,7 +19,8 @@ async def get_llm_manager(settings: Settings = Depends(get_settings)) -> LLMServ
     try:
         return LLMServiceManager(
             grok_api_key=settings.grok_api_key,
-            claude_api_key=settings.claude_api_key
+            claude_api_key=settings.claude_api_key,
+            grok_model_name=settings.grok_model_name
         )
     except Exception as e:
         raise HTTPException(

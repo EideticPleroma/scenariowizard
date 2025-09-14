@@ -1,0 +1,41 @@
+{
+  "cost_analysis": {
+    "total_cost_usd": 0.05999,
+    "breakdown": {
+      "unit_tests": {
+        "cost_usd": 0.03063,
+        "tokens": {
+          "input": 1161,
+          "output": 634,
+          "total": 2160
+        },
+        "generation_time_ms": 21715,
+        "scenarios_generated": 7
+      },
+      "integration_tests": {
+        "cost_usd": 0.02936,
+        "tokens": {
+          "input": 1163,
+          "output": 591,
+          "total": 2162
+        },
+        "generation_time_ms": 19234,
+        "scenarios_generated": 6
+      }
+    },
+    "efficiency_metrics": {
+      "cost_per_scenario": 0.0046,
+      "cost_per_1000_tokens": 0.0139,
+      "scenarios_per_dollar": 216.7,
+      "time_per_scenario_ms": 3149
+    },
+    "comparison": {
+      "manual_authoring_time_hours": 8,
+      "ai_generation_time_hours": 0.011,
+      "time_savings_percentage": 99.86,
+      "estimated_manual_cost_usd": 400,
+      "ai_generation_cost_usd": 0.06,
+      "cost_savings_percentage": 99.985
+    }
+  }
+}

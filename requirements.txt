@@ -1,5 +1,5 @@
 # Core Framework
-fastapi==0.104.1
+fastapi==0.109.0
 uvicorn[standard]==0.24.0
 streamlit==1.28.1
 
@@ -15,7 +15,7 @@ pydantic-settings==2.1.0
 # Document Processing
 markdown==3.5.1
 markdown-it-py==3.0.0
-spacy==3.7.2
+spacy==3.7.5
 
 # AI/ML
 langchain==0.1.0
@@ -48,7 +48,7 @@ isort==5.12.0
 flake8==6.1.0
 
 # MCP (Model Context Protocol)
-mcp==0.1.0
+# mcp==0.1.0
 
 # Environment
 python-dotenv==1.0.0

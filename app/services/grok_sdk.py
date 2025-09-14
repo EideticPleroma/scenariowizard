@@ -13,7 +13,7 @@ class Grok:
     def __init__(self, api_key: str):
         self.api_key = api_key
         self.base_url = "https://api.x.ai/v1"
-        self.model = "grok-2-1212"  # Grok 4 model
+        self.model = "grok-4"
 
     async def chat_completion(
         self, 
@@ -61,3 +61,4 @@ class Grok:
         except Exception as e:
             logger.error("Grok API unexpected error", error=str(e))
             raise Exception(f"Grok API error: {str(e)}")
+

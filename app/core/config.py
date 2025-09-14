@@ -4,6 +4,10 @@ Configuration management for ScenarioWizard
 
 import os
 from typing import Optional
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 class Settings:
     """Application settings with environment variable support"""
@@ -13,9 +17,10 @@ class Settings:
         self.database_url = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./scenario_wizard.db")
         
         # LLM API Keys
-        self.grok_api_key = os.getenv("GROK_API_KEY")
+        self.grok_api_key = os.getenv("GROK_API_KEY") or "xai-ltDmpTr1Q5c9OIZy4Z82IlHySGodpNpVpmVKnndKWsoAN3WHUqUZy7QuieSdq4vgIg8fxZFzMJsvMBh"
         self.claude_api_key = os.getenv("CLAUDE_API_KEY")
-        
+        self.grok_model_name = os.getenv("GROK_MODEL_NAME", "grok-4")
+
         # Application Settings
         self.debug = os.getenv("DEBUG", "false").lower() == "true"
         self.log_level = os.getenv("LOG_LEVEL", "INFO")

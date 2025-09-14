@@ -1,0 +1,5 @@
+{
+  "feature_ids": ["4f521d40-81d6-4aa5-aa83-af6b17428bc0"],
+  "test_types": ["unit", "integration", "e2e"],
+  "max_scenarios": 3
+}

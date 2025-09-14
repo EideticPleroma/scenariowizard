@@ -314,10 +314,7 @@ async def check_llm_health(
     try:
         health_results = await llm_manager.health_check_all()
 
-        return {
-            "llm_services": health_results,
-            "overall_health": any(health_results.values())
-        }
+        return health_results
     except Exception as e:
         logger.error("LLM health check failed", error=str(e))
         raise HTTPException(status_code=500, detail=f"LLM health check failed: {str(e)}")

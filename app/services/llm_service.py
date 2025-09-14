@@ -53,11 +53,11 @@ class LLMService(ABC):
 class GrokService(LLMService):
     """Grok API implementation for LLM service"""
 
-    def __init__(self, api_key: str):
-        from dot_grok_sdk_placeholder import Grok  # Import here to avoid circular imports
+    def __init__(self, api_key: str, model_name: str = "grok-4"):
+        from app.services.grok_sdk import Grok  # Import here to avoid circular imports
         super().__init__(api_key)
         self.client = Grok(api_key=api_key)
-        self.model = "grok-2-1212"  # Grok 4 model
+        self.model = model_name
 
     def get_model_name(self) -> str:
         return self.model
@@ -229,12 +229,12 @@ class ClaudeService(LLMService):
 class LLMServiceManager:
     """Manager class for LLM services with fallback logic"""
 
-    def __init__(self, grok_api_key: Optional[str] = None, claude_api_key: Optional[str] = None):
+    def __init__(self, grok_api_key: Optional[str] = None, claude_api_key: Optional[str] = None, grok_model_name: str = "grok-4"):
         self.services: Dict[str, LLMService] = {}
         self.primary_provider = "grok"
 
         if grok_api_key:
-            self.services["grok"] = GrokService(grok_api_key)
+            self.services["grok"] = GrokService(grok_api_key, model_name=grok_model_name)
 
         if claude_api_key:
             self.services["claude"] = ClaudeService(claude_api_key)
