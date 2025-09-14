@@ -1,42 +1,78 @@
 """
-BDD-Wizard Main Application
-Streamlit web interface for BDD scenario generation
+ScenarioWizard API
+FastAPI backend for BDD scenario generation
 """
 
-import streamlit as st
+from fastapi import FastAPI, APIRouter
+from fastapi.middleware.cors import CORSMiddleware
+import structlog
+import logging
 
-def main():
-    st.set_page_config(
-        page_title="BDD-Wizard",
-        page_icon="🧙‍♂️",
-        layout="wide",
-        initial_sidebar_state="expanded"
-    )
-    
-    st.title("🧙‍♂️ BDD-Wizard")
-    st.subtitle("AI-Powered BDD Scenario Generation")
-    
-    st.markdown("""
-    Welcome to BDD-Wizard! This tool helps you transform your business requirements, 
-    user stories, and acceptance criteria into executable BDD scenarios automatically.
-    
-    ## Getting Started
-    
-    1. **Upload Documents**: Upload your Markdown files with user stories and acceptance criteria
-    2. **Generate Scenarios**: Let our AI create BDD scenarios from your requirements
-    3. **Export Features**: Download .feature files ready for your BDD framework
-    
-    ## Features
-    
-    - 📝 **Markdown Input**: Process user stories and requirements from Markdown documents
-    - 🤖 **AI-Powered**: Uses advanced LLMs to create accurate BDD scenarios
-    - 🎯 **Gherkin Output**: Exports standard .feature files compatible with Cucumber, SpecFlow, and other BDD frameworks
-    - 🔧 **MCP Integration**: Exposes tools via Model Context Protocol for external AI agents
-    - ⚡ **Rapid Development**: Built with FastAPI and Streamlit for quick iteration
-    - 🐳 **Docker Ready**: Simple deployment with Docker containers
-    """)
-    
-    st.info("🚧 This is a work in progress. The full functionality will be available soon!")
+# Configure structured logging
+logging.basicConfig(level=logging.INFO)
+logger = structlog.get_logger()
+
+app = FastAPI(
+    title="ScenarioWizard API",
+    description="BDD Scenario Generation Tool",
+    version="1.0.0"
+)
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Health check endpoint
+@app.get("/health")
+async def health_check():
+    logger.info("Health check requested")
+    return {"status": "healthy", "version": "1.0.0"}
+
+# Root endpoint
+@app.get("/")
+async def root():
+    return {
+        "message": "Welcome to ScenarioWizard API",
+        "version": "1.0.0",
+        "docs": "/docs",
+        "docs_json": "/openapi.json"
+    }
+
+async def create_tables_on_startup():
+    """Create database tables on application startup"""
+    from app.core.database_init import create_tables
+    try:
+        await create_tables()
+        logger.info("Database tables created/verified on startup")
+    except Exception as e:
+        logger.error(f"Failed to create database tables: {e}")
+
+def create_api_app() -> FastAPI:
+    """Create and configure the FastAPI application"""
+    from app.api.routes.documents import router as documents_router
+    from app.api.routes.scenarios import router as scenarios_router
+
+    # Include routers
+    app.include_router(documents_router, prefix="/api/v1")
+    app.include_router(scenarios_router, prefix="/api/v1")
+
+    # Add startup event to create tables
+    @app.on_event("startup")
+    async def startup_event():
+        await create_tables_on_startup()
+
+    logger.info("FastAPI application created with CORS and document routes")
+    return app
+
+# Create the application instance
+app = create_api_app()
 
 if __name__ == "__main__":
-    main()
+    import uvicorn
+    logger.info("Starting ScenarioWizard API server on port 8000")
+    uvicorn.run(app, host="0.0.0.0", port=8000)

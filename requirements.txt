@@ -5,6 +5,7 @@ streamlit==1.28.1
 
 # Database
 sqlalchemy==2.0.23
+aiosqlite==0.19.0
 alembic==1.12.1
 
 # Data Validation
@@ -12,6 +13,7 @@ pydantic==2.5.0
 pydantic-settings==2.1.0
 
 # Document Processing
+markdown==3.5.1
 markdown-it-py==3.0.0
 spacy==3.7.2
 
@@ -22,6 +24,7 @@ anthropic==0.7.8
 
 # HTTP Client
 httpx==0.25.2
+aiohttp==3.9.1
 aiofiles==23.2.1
 
 # Utilities
@@ -29,6 +32,7 @@ python-multipart==0.0.6
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 tenacity==8.2.3
+structlog==23.2.0
 
 # Development
 pytest==7.4.3

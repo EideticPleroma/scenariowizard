@@ -193,3 +193,11 @@ mcp-logs/
 # AI Development Rules (keep local only)
 .cursorrules
 .cline_rules
+
+# Test Coverage
+htmlcov/
+.coverage
+.coverage.*
+.pytest_cache/
+coverage.xml
+*.cover
