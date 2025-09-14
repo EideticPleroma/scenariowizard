@@ -189,3 +189,7 @@ mcp-logs/
 
 # Obsidian
 .obsidian/
+
+# AI Development Rules (keep local only)
+.cursorrules
+.cline_rules
