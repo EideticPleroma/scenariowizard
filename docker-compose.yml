@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+      - "8501:8501"
+    environment:
+      - DATABASE_URL=sqlite:///./bdd_wizard.db
+      - GROK_API_KEY=${GROK_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    volumes:
+      - ./uploads:/app/uploads
+      - ./downloads:/app/downloads
+      - ./logs:/app/logs
+    depends_on:
+      - mcp-server
+    networks:
+      - bdd-wizard-network
+
+  mcp-server:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.mcp
+    ports:
+      - "3000:3000"
+    environment:
+      - MCP_SERVER_URL=http://mcp-server:3000
+      - API_GATEWAY_URL=http://app:8000
+    networks:
+      - bdd-wizard-network
+
+networks:
+  bdd-wizard-network:
+    driver: bridge
+
+volumes:
+  uploads:
+  downloads:
+  logs:
