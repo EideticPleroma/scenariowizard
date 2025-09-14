@@ -12,6 +12,10 @@ class MarkdownParser:
     def parse_document(self, content: str) -> Dict[str, Any]:
         """Parse markdown content and extract structure"""
         try:
+            # Validate content is not empty
+            if not content or not content.strip():
+                raise ValueError("Failed to parse markdown: Content is empty")
+            
             # Extract user stories
             user_stories = self._extract_user_stories(content)
 
@@ -78,7 +82,7 @@ class MarkdownParser:
 
             features.append({
                 "title": feature_title,
-                "content": feature_content
+                "user_stories": feature_content
             })
 
         return features

@@ -5,7 +5,6 @@ services:
     build: .
     ports:
       - "8000:8000"
-      - "8501:8501"
     environment:
       - DATABASE_URL=sqlite:///./bdd_wizard.db
       - GROK_API_KEY=${GROK_API_KEY}
@@ -14,8 +13,23 @@ services:
       - ./uploads:/app/uploads
       - ./downloads:/app/downloads
       - ./logs:/app/logs
+    command: ["python", "-m", "uvicorn", "app.main:create_api_app", "--host", "0.0.0.0", "--port", "8000"]
     depends_on:
       - mcp-server
+    networks:
+      - bdd-wizard-network
+
+  streamlit-frontend:
+    build: .
+    ports:
+      - "8501:8501"
+    environment:
+      - API_BASE_URL=http://app:8000/api/v1
+    volumes:
+      - ./data:/app/data
+    command: ["streamlit", "run", "app/main_streamlit.py", "--server.port=8501", "--server.address=0.0.0.0"]
+    depends_on:
+      - app
     networks:
       - bdd-wizard-network
 

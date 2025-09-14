@@ -5,6 +5,12 @@ import structlog
 
 from app.models.schemas import DocumentCreate, DocumentResponse, FeatureResponse, ScenarioResponse
 from app.services.database import get_database_session, DatabaseService
+
+async def get_database_service(session: AsyncSession = Depends(get_database_session)) -> DatabaseService:
+    """Dependency injection for DatabaseService"""
+    print(f"🔍 get_database_service called with session: {type(session)}")
+    print(f"🔍 session has 'add' method: {hasattr(session, 'add')}")
+    return DatabaseService(session)
 from app.services.parser import MarkdownParser
 
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -13,7 +19,7 @@ logger = structlog.get_logger()
 @router.post("/upload", response_model=DocumentResponse)
 async def upload_document(
     file: UploadFile = File(...),
-    session: AsyncSession = Depends(get_database_session)
+    db_service: DatabaseService = Depends(get_database_service)
 ):
     """Upload a markdown document for processing"""
     try:
@@ -43,7 +49,6 @@ async def upload_document(
             raise HTTPException(status_code=400, detail="File contains no readable content")
 
         # Create document
-        db_service = DatabaseService(session)
         document_data = {
             "filename": file.filename,
             "content": content_str,
@@ -54,8 +59,11 @@ async def upload_document(
 
         logger.info("Document uploaded", document_id=document.id, filename=file.filename)
 
-        return DocumentResponse.from_orm(document)
+        return DocumentResponse.model_validate(document)
 
+    except HTTPException:
+        # Re-raise HTTPExceptions to preserve status codes
+        raise
     except Exception as e:
         logger.error("Document upload failed", error=str(e))
         raise HTTPException(status_code=500, detail="Failed to upload document")
@@ -63,34 +71,31 @@ async def upload_document(
 @router.get("/{document_id}", response_model=DocumentResponse)
 async def get_document(
     document_id: str,
-    session: AsyncSession = Depends(get_database_session)
+    db_service: DatabaseService = Depends(get_database_service)
 ):
     """Get document by ID"""
-    db_service = DatabaseService(session)
     document = await db_service.get_document(document_id)
 
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
 
-    return DocumentResponse.from_orm(document)
+    return DocumentResponse.model_validate(document)
 
 @router.get("/", response_model=List[DocumentResponse])
 async def list_documents(
-    session: AsyncSession = Depends(get_database_session)
+    db_service: DatabaseService = Depends(get_database_service)
 ):
     """List all documents"""
-    db_service = DatabaseService(session)
     documents = await db_service.list_documents()
-    return [DocumentResponse.from_orm(doc) for doc in documents]
+    return [DocumentResponse.model_validate(doc) for doc in documents]
 
 @router.post("/{document_id}/process")
 async def process_document(
     document_id: str,
-    session: AsyncSession = Depends(get_database_session)
+    db_service: DatabaseService = Depends(get_database_service)
 ):
     """Process a document to extract features and generate scenarios"""
     try:
-        db_service = DatabaseService(session)
         document = await db_service.get_document(document_id)
 
         if not document:
@@ -115,6 +120,9 @@ async def process_document(
 
         return {"status": "success", "features_created": len(parsed_data.get("features", []))}
 
+    except HTTPException:
+        # Re-raise HTTPExceptions to preserve status codes
+        raise
     except Exception as e:
         # Update document status to failed
         await db_service.update_document_status(document_id, "failed", str(e))
@@ -124,9 +132,13 @@ async def process_document(
 @router.get("/{document_id}/features", response_model=List[FeatureResponse])
 async def get_document_features(
     document_id: str,
-    session: AsyncSession = Depends(get_database_session)
+    db_service: DatabaseService = Depends(get_database_service)
 ):
     """Get features for a document"""
-    db_service = DatabaseService(session)
+    # Check if document exists
+    document = await db_service.get_document(document_id)
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
     features = await db_service.get_features_by_document(document_id)
-    return [FeatureResponse.from_orm(feature) for feature in features]
+    return [FeatureResponse.model_validate(feature) for feature in features]

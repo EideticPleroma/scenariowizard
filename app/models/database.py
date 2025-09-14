@@ -13,6 +13,7 @@ class Document(Base):
     filename = Column(String(255), nullable=False)
     content = Column(Text)
     status = Column(String(50), default="pending")
+    error_message = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, onupdate=datetime.utcnow)
 

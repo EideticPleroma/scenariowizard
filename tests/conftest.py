@@ -3,6 +3,7 @@ Test configuration and fixtures
 """
 
 import pytest
+import pytest_asyncio
 import asyncio
 from typing import AsyncGenerator, Generator
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
@@ -15,6 +16,7 @@ import os
 from app.main import app
 from app.models.database import Base
 from app.services.database import get_database_session
+from app.api.routes.documents import get_database_service
 
 # Test database URL
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
@@ -26,7 +28,7 @@ def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
     yield loop
     loop.close()
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def test_engine():
     """Create test database engine"""
     engine = create_async_engine(TEST_DATABASE_URL, echo=False)
@@ -42,8 +44,8 @@ async def test_engine():
         await conn.run_sync(Base.metadata.drop_all)
     await engine.dispose()
 
-@pytest.fixture
-async def test_session(test_engine) -> AsyncGenerator[AsyncSession, None]:
+@pytest_asyncio.fixture
+async def test_session(test_engine) -> AsyncSession:
     """Create test database session"""
     async_session = sessionmaker(test_engine, class_=AsyncSession, expire_on_commit=False)
     
@@ -53,10 +55,16 @@ async def test_session(test_engine) -> AsyncGenerator[AsyncSession, None]:
 @pytest.fixture
 def test_client(test_session: AsyncSession) -> TestClient:
     """Create test client with database session override"""
+    from app.services.database import DatabaseService
+    
     def override_get_db():
         return test_session
     
+    def override_get_db_service():
+        return DatabaseService(test_session)
+    
     app.dependency_overrides[get_database_session] = override_get_db
+    app.dependency_overrides[get_database_service] = override_get_db_service
     
     with TestClient(app) as client:
         yield client

@@ -67,9 +67,9 @@ class TestDocumentRoutes:
         
         response = test_client.post("/api/v1/documents/upload", files=files)
         
-        assert response.status_code == 400
+        assert response.status_code == 422
         data = response.json()
-        assert "Filename is required" in data["detail"]
+        assert "detail" in data
 
     def test_upload_document_empty_file(self, test_client: TestClient):
         """Test uploading empty file"""

@@ -5,9 +5,14 @@ import structlog
 from pydantic import parse_obj_as
 
 from app.services.database import DatabaseService, get_database_session
+
+async def get_database_service(session: AsyncSession = Depends(get_database_session)) -> DatabaseService:
+    """Dependency injection for DatabaseService"""
+    return DatabaseService(session)
 from app.services.llm_service import LLMServiceManager, LLMServiceResponse
 from app.services.prompt_service import prompt_template_service
 from app.services.llm_dependencies import get_llm_manager
+from app.services.export_service import ExportService
 from app.models.schemas import (
     GenerationRequest, GenerationResponse,
     ExportRequest, ScenarioResponse, FeatureResponse
@@ -22,31 +27,41 @@ router = APIRouter(prefix="/scenarios", tags=["scenarios"])
 async def generate_scenarios(
     request: GenerationRequest,
     background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_database_session),
+    db_service: DatabaseService = Depends(get_database_service),
     llm_manager: LLMServiceManager = Depends(get_llm_manager)
 ) -> GenerationResponse:
-    """Generate BDD scenarios using LLM for specified features"""
+    """Generate BDD scenarios using LLM for specified features or document"""
     import time
     start_time = time.time()
 
-    db_service = DatabaseService(db)
-
     try:
-        # LLM service manager is injected via dependency
-
         # Get all requested features
         features = []
-        for feature_id in request.feature_ids:
-            feature = await db_service.session.execute(
-                select(Feature).where(Feature.id == feature_id)
-            )
-            feature_obj = feature.scalar_one_or_none()
-            if not feature_obj:
+
+        if request.document_id:
+            # Get all features from the document
+            query = select(Feature).where(Feature.document_id == request.document_id)
+            result = await db_service.session.execute(query)
+            features = result.scalars().all()
+
+            if not features:
                 raise HTTPException(
                     status_code=404,
-                    detail=f"Feature {feature_id} not found"
+                    detail=f"No features found for document {request.document_id}"
                 )
-            features.append(feature_obj)
+        else:
+            # Get features by IDs
+            for feature_id in request.feature_ids:
+                feature = await db_service.session.execute(
+                    select(Feature).where(Feature.id == feature_id)
+                )
+                feature_obj = feature.scalar_one_or_none()
+                if not feature_obj:
+                    raise HTTPException(
+                        status_code=404,
+                        detail=f"Feature {feature_id} not found"
+                    )
+                features.append(feature_obj)
 
         scenario_ids = []
 
@@ -162,10 +177,9 @@ async def generate_scenarios(
 @router.get("/feature/{feature_id}", response_model=List[ScenarioResponse])
 async def get_scenarios_by_feature(
     feature_id: str,
-    db: AsyncSession = Depends(get_database_session)
+    db_service: DatabaseService = Depends(get_database_service)
 ) -> List[ScenarioResponse]:
     """Get all scenarios for a specific feature"""
-    db_service = DatabaseService(db)
 
     try:
         scenarios = await db_service.get_scenarios_by_feature(feature_id)
@@ -178,10 +192,9 @@ async def get_scenarios_by_feature(
 @router.get("/{scenario_id}/metadata")
 async def get_scenario_metadata(
     scenario_id: str,
-    db: AsyncSession = Depends(get_database_session)
+    db_service: DatabaseService = Depends(get_database_service)
 ) -> Dict[str, Any]:
     """Get detailed metadata for a specific scenario"""
-    db_service = DatabaseService(db)
 
     try:
         metadata = await db_service.get_scenario_with_metadata(scenario_id)
@@ -195,55 +208,53 @@ async def get_scenario_metadata(
         raise HTTPException(status_code=500, detail=f"Failed to retrieve metadata: {str(e)}")
 
 @router.post("/export")
-async def export_scenarios(
-    request: ExportRequest,
-    db: AsyncSession = Depends(get_database_session)
+async def export_scenarios_simple(
+    format: str = "gherkin",
+    scope: str = "All scenarios",
+    test_types: Optional[List[str]] = None,
+    feature_ids: Optional[List[str]] = None,
+    db_service: DatabaseService = Depends(get_database_service)
 ) -> Dict[str, Any]:
-    """Export scenarios in various formats"""
-    db_service = DatabaseService(db)
-
+    """Simple export endpoint for Streamlit"""
     try:
-        exported_scenarios = []
+        # Get scenarios based on scope
+        scenarios = []
 
-        for scenario_id in request.scenario_ids:
-            metadata = await db_service.get_scenario_with_metadata(scenario_id)
-            if not metadata:
-                logger.warning("Scenario not found during export", scenario_id=scenario_id)
-                continue
-
-            exported_scenarios.append(metadata)
-
-        if request.format == "feature":
-            # Generate .feature file content
-            feature_content = _generate_feature_file_content(exported_scenarios)
-            return {
-                "format": "feature",
-                "content": feature_content,
-                "filename": "generated_scenarios.feature",
-                "total_scenarios": len(exported_scenarios)
-            }
-
-        elif request.format == "json":
-            return {
-                "format": "json",
-                "content": exported_scenarios,
-                "total_scenarios": len(exported_scenarios)
-            }
-
+        if scope == "By feature" and feature_ids:
+            # Get scenarios by feature IDs
+            for feature_id in feature_ids:
+                feature_scenarios = await db_service.get_scenarios_by_feature(feature_id)
+                scenarios.extend(feature_scenarios)
         else:
-            raise HTTPException(status_code=400, detail="Unsupported format")
+            # Get all scenarios
+            result = await db_service.session.execute(select(Scenario))
+            scenarios = result.scalars().all()
 
+        # Filter by test types if specified
+        if test_types:
+            scenarios = [s for s in scenarios if s.test_type in test_types]
+
+        if not scenarios:
+            raise HTTPException(status_code=404, detail="No scenarios found for export")
+
+        # Export scenarios
+        export_service = ExportService()
+        export_result = export_service.export_scenarios(scenarios, format)
+
+        return export_result
+
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error("Export failed", error=str(e))
+        logger.error("Simple export failed", error=str(e))
         raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
 
 @router.get("/summary")
 async def get_scenarios_summary(
     feature_ids: Optional[List[str]] = None,
-    db: AsyncSession = Depends(get_database_session)
+    db_service: DatabaseService = Depends(get_database_service)
 ) -> Dict[str, Any]:
     """Get summary of scenarios across features"""
-    db_service = DatabaseService(db)
 
     try:
         if not feature_ids:

@@ -33,8 +33,8 @@ class DocumentResponse(DocumentBase):
 
 class FeatureBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=255)
-    user_stories: str
-    acceptance_criteria: str
+    user_stories: Optional[str] = None
+    acceptance_criteria: Optional[str] = None
 
 class FeatureCreate(FeatureBase):
     document_id: str
@@ -97,9 +97,18 @@ class PromptTemplateResponse(PromptTemplateBase):
 
 # Generation request/response models
 class GenerationRequest(BaseModel):
-    feature_ids: List[str] = Field(..., min_items=1)
+    feature_ids: Optional[List[str]] = None
+    document_id: Optional[str] = None  # For Phase 3 frontend compatibility
     test_types: List[TestType] = [TestType.UNIT]
     provider: Optional[str] = None  # 'grok' or 'claude', None for auto-selection
+    max_scenarios: Optional[int] = 3
+    include_examples: Optional[bool] = True
+
+    @validator('feature_ids', pre=True, always=True)
+    def check_ids(cls, v, values):
+        if not v and not values.get('document_id'):
+            raise ValueError('Either feature_ids or document_id must be provided')
+        return v
 
 class GenerationResponse(BaseModel):
     scenario_ids: List[str]
@@ -107,5 +116,8 @@ class GenerationResponse(BaseModel):
     processing_time_ms: int
 
 class ExportRequest(BaseModel):
-    scenario_ids: List[str] = Field(..., min_items=1)
-    format: str = Field(pattern="^(feature|json)$", default="feature")
+    format: str = Field(pattern="^(gherkin|cucumber|playwright|pytest)$", default="gherkin")
+    scope: Optional[str] = Field(pattern="^(all|by_test_type|by_feature)$", default="all")
+    test_types: Optional[List[str]] = None
+    feature_ids: Optional[List[str]] = None
+    scenario_ids: Optional[List[str]] = None  # For backward compatibility
